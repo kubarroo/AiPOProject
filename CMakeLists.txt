@@ -1,55 +1,33 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(MySDL3App LANGUAGES CXX)
+project(AiPOProject LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Output executable
-set(APP_NAME MySDL3App)
+set(APP_NAME AiPOProject)
 
-# Collect app sources
-file(GLOB_RECURSE APP_SOURCES
-    CONFIGURE_DEPENDS
+file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/app/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.cxx"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.cc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/app/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.h"
 )
 
 add_executable(${APP_NAME} ${APP_SOURCES})
 
-target_include_directories(${APP_NAME} PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/app"
-)
+target_include_directories(${APP_NAME} PRIVATE app)
 
 # SDL3
-find_package(SDL3 REQUIRED CONFIG)
+add_subdirectory(external/SDL)
 
 # OpenCV
-find_package(OpenCV REQUIRED)
-
-target_link_libraries(${APP_NAME} PRIVATE
-    SDL3::SDL3
-    ${OpenCV_LIBS}
-)
-
-target_include_directories(${APP_NAME} PRIVATE
-    ${OpenCV_INCLUDE_DIRS}
-)
+set(BUILD_LIST core,imgproc,imgcodecs,videoio,highgui CACHE STRING "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_PERF_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/opencv)
 
 # Dear ImGui
-# Expected layout:
-# external/imgui/
-#   imgui.cpp
-#   imgui_draw.cpp
-#   imgui_tables.cpp
-#   imgui_widgets.cpp
-#   backends/imgui_impl_sdl3.cpp
-#   backends/imgui_impl_sdlrenderer3.cpp OR imgui_impl_sdlgpu3.cpp/opengl3/etc.
-
 set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui")
 
 target_sources(${APP_NAME} PRIVATE
@@ -58,8 +36,6 @@ target_sources(${APP_NAME} PRIVATE
     "${IMGUI_DIR}/imgui_tables.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
     "${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp"
-
-    # Pick ONE renderer backend:
     "${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp"
 )
 
@@ -68,11 +44,11 @@ target_include_directories(${APP_NAME} PRIVATE
     "${IMGUI_DIR}/backends"
 )
 
-# Windows: copy SDL3 DLL after build if using shared SDL3
-if(WIN32)
-    add_custom_command(TARGET ${APP_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:SDL3::SDL3>
-        $<TARGET_FILE_DIR:${APP_NAME}>
-    )
-endif()
+target_link_libraries(${APP_NAME} PRIVATE
+    SDL3::SDL3
+    opencv_core
+    opencv_imgproc
+    opencv_imgcodecs
+    opencv_videoio
+    opencv_highgui
+)
