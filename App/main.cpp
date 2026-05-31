@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;
+    // (void)io;
 
     ImGui::StyleColorsDark();
 
