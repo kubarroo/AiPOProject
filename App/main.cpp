@@ -9,6 +9,7 @@
 #include <SDL3/SDL_main.h>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
@@ -79,6 +80,64 @@ void DestroyBackgroundTexture(AppContext& ctx) {
     }
 }
 
+void ShowDockSpace()
+{
+    ImGuiWindowFlags window_flags =
+        ImGuiWindowFlags_MenuBar |
+        ImGuiWindowFlags_NoDocking |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+    ImGui::Begin("DockSpace", nullptr, window_flags);
+
+    ImGui::PopStyleVar(2);
+
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+
+    static bool first_frame = true;
+    if (first_frame)
+    {
+        first_frame = false;
+
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
+
+        ImGuiID center;
+        ImGuiID right;
+
+        ImGui::DockBuilderSplitNode(
+            dockspace_id,
+            ImGuiDir_Right,
+            0.25f,
+            &right,
+            &center
+        );
+
+        ImGui::DockBuilderDockWindow("Obraz", center);
+        ImGui::DockBuilderDockWindow("Panel Sterowania", right);
+
+        ImGui::DockBuilderFinish(dockspace_id);
+    }
+
+    ImGui::DockSpace(dockspace_id);
+
+    ImGui::End();
+}
+
 void RenderFrame(AppContext& ctx) {
     SDL_GetWindowSize(ctx.window, &ctx.window_w, &ctx.window_h);
 
@@ -86,28 +145,20 @@ void RenderFrame(AppContext& ctx) {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    ShowDockSpace();
+
+    ImGui::Begin("Obraz");
     if (ctx.background_texture) {
-        ImDrawList* background_draw_list = ImGui::GetBackgroundDrawList();
+        ImVec2 avail = ImGui::GetContentRegionAvail();
 
-        ImVec2 p_min = ImVec2(0.0f, 0.0f);
-        ImVec2 p_max = ImVec2(
-            static_cast<float>(ctx.window_w),
-            static_cast<float>(ctx.window_h)
+        ImGui::Image(
+            (ImTextureID)(intptr_t)ctx.background_texture,
+            avail
         );
-
-        background_draw_list->AddImage(
-        (ImTextureID)(intptr_t)ctx.background_texture,
-                p_min,
-                p_max
-            );
     }
-
-    ImGui::Begin("Panel kontrolny");
-    ImGui::Text("Witaj w aplikacji C++!");
-    ImGui::Text("Rozdzielczosc okna: %d x %d", ctx.window_w, ctx.window_h);
     ImGui::End();
 
-    ImGui::Begin("Obsługa plików");
+    ImGui::Begin("Panel Sterowania");
     ImGui::TextWrapped("Ścieżka do ostatnio upuszczonego pliku:");
     ImGui::Separator();
     ImGui::TextColored(
@@ -179,7 +230,7 @@ int main(int argc, char* argv[]) {
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    // (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     ImGui::StyleColorsDark();
 
