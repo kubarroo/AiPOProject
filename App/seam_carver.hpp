@@ -44,6 +44,53 @@ class SeamCarver {
                                     targetHeight);
   }
 
+  std::vector<std::vector<int>> getRemovedSeams(cv::Mat img, int num_seams) {
+    int H = img.rows;
+    int W = img.cols;
+    
+    cv::Mat idxMap(H, W, CV_32S);
+    for (int i = 0; i < H; ++i) {
+      int* row_ptr = idxMap.ptr<int>(i);
+      for (int j = 0; j < W; ++j)
+        row_ptr[j] = j;
+    }
+
+    std::vector<std::vector<int>> original_seams;
+    original_seams.reserve(num_seams);
+    
+    cv::Mat gray(H, W, CV_8UC1);
+    cv::Mat grad_x(H, W, CV_32F);
+    cv::Mat grad_y(H, W, CV_32F);
+    cv::Mat energy(H, W, CV_32F);
+    cv::Mat M(H, W, CV_32F);
+    cv::Mat backtrack(H, W, CV_32S);
+    std::vector<int> seam(H);
+
+    for (int s = 0; s < num_seams; ++s) {
+      if (img.cols <= 1) break;
+      int curW = img.cols;
+      cv::Mat gray_roi = gray(cv::Rect(0, 0, curW, H));
+      cv::Mat grad_x_roi = grad_x(cv::Rect(0, 0, curW, H));
+      cv::Mat grad_y_roi = grad_y(cv::Rect(0, 0, curW, H));
+      cv::Mat energy_roi = energy(cv::Rect(0, 0, curW, H));
+      cv::Mat M_roi = M(cv::Rect(0, 0, curW, H));
+      cv::Mat bt_roi = backtrack(cv::Rect(0, 0, curW, H));
+
+      computeEnergy(img, gray_roi, grad_x_roi, grad_y_roi, energy_roi);
+      findSingleSeam(energy_roi, M_roi, bt_roi, seam);
+
+      std::vector<int> mapped_seam(H);
+      for (int i = 0; i < H; ++i) {
+        mapped_seam[i] = idxMap.ptr<int>(i)[seam[i]];
+      }
+      original_seams.push_back(mapped_seam);
+      
+      removeSingleSeamInPlace(img, seam);
+      removeSingleSeamInPlace(idxMap, seam);
+    }
+    return original_seams;
+  }
+
  private:
   cv::Mat baseImage;
   LastCachedResult lastCachedResult = {0, 0, cv::Mat()};

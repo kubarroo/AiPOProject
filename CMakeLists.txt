@@ -10,16 +10,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Sources
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.h"
 )
 
+list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/App/benchmark.cpp")
 add_executable(${APP_NAME} ${APP_SOURCES})
 
 target_include_directories(${APP_NAME}
     PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/app"
+        "${CMAKE_CURRENT_SOURCE_DIR}/App"
 )
 
 # SDL3
@@ -105,3 +106,16 @@ target_link_libraries(${APP_NAME}
 
         OpenMP::OpenMP_CXX
 )
+
+add_executable(benchmark App/benchmark.cpp)
+target_include_directories(benchmark PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/App" 
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/core/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/imgproc/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/imgcodecs/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/videoio/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/highgui/include"
+)
+target_link_libraries(benchmark PRIVATE opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui OpenMP::OpenMP_CXX)

@@ -12,6 +12,8 @@
 #include <imgui_internal.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#include "seam_carver.hpp"
+#include "fast_carver.hpp"
 
 struct AppContext {
     SDL_Window* window = nullptr;
@@ -24,6 +26,17 @@ struct AppContext {
         "Brak upuszczonego pliku. Przeciągnij plik tutaj!";
 
     SDL_Texture* background_texture = nullptr;
+    cv::Mat current_image;
+    
+    SeamCarver carver;
+    FastCarver fast_carver;
+    bool use_seam_carving = true;
+    
+    Axis current_axis = Axis::HORIZONTAL;
+    int target_pct = 100;
+    
+    int tex_w = 0;
+    int tex_h = 0;
 };
 
 SDL_Texture* MatToTexture(SDL_Renderer* renderer, const cv::Mat& mat) {
@@ -150,10 +163,12 @@ void RenderFrame(AppContext& ctx) {
     ImGui::Begin("Obraz");
     if (ctx.background_texture) {
         ImVec2 avail = ImGui::GetContentRegionAvail();
+        float w = ctx.tex_w > 0 ? (float)ctx.tex_w : avail.x;
+        float h = ctx.tex_h > 0 ? (float)ctx.tex_h : avail.y;
 
         ImGui::Image(
             (ImTextureID)(intptr_t)ctx.background_texture,
-            avail
+            ImVec2(w, h)
         );
     }
     ImGui::End();
@@ -166,6 +181,53 @@ void RenderFrame(AppContext& ctx) {
         "%s",
         ctx.dropped_file_path.c_str()
     );
+    
+    if (!ctx.current_image.empty()) {
+        ImGui::Separator();
+        ImGui::Text("Rozmiar bazowy: %dx%d", ctx.current_image.cols, ctx.current_image.rows);
+        ImGui::TextColored(ImVec4(1,1,0,1), "Precomputed Real-Time Seam Carving");
+        
+        int last_axis = (int)ctx.current_axis;
+        ImGui::RadioButton("Oś Pozioma (Szerokość)", (int*)&ctx.current_axis, (int)Axis::HORIZONTAL);
+        ImGui::RadioButton("Oś Pionowa (Wysokość)", (int*)&ctx.current_axis, (int)Axis::VERTICAL);
+        
+        if (last_axis != (int)ctx.current_axis) {
+            std::cout << "Zmieniono oś. Rozpoczynam prekomputację..." << std::endl;
+            uint64_t start = SDL_GetTicks();
+            ctx.fast_carver.precompute(ctx.current_image, ctx.carver, ctx.current_axis);
+            uint64_t end = SDL_GetTicks();
+            std::cout << "Prekomputacja zakończona w " << (end - start) << " ms." << std::endl;
+            
+            ctx.target_pct = 100;
+            int max_size = (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols : ctx.current_image.rows;
+            cv::Mat scaled = ctx.fast_carver.getRealTimeImage(max_size);
+            DestroyBackgroundTexture(ctx);
+            ctx.background_texture = MatToTexture(ctx.renderer, scaled);
+            ctx.tex_w = scaled.cols;
+            ctx.tex_h = scaled.rows;
+        }
+        
+        int max_size = (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols : ctx.current_image.rows;
+        const char* slider_label = (ctx.current_axis == Axis::HORIZONTAL) ? "Rozmiar poziomy (%)" : "Rozmiar pionowy (%)";
+        
+        if (ImGui::SliderInt(slider_label, &ctx.target_pct, 1, 200)) {
+            int target_size = std::max(1, (max_size * ctx.target_pct) / 100);
+            cv::Mat scaled;
+            if (ctx.use_seam_carving) {
+                scaled = ctx.fast_carver.getRealTimeImage(target_size);
+            } else {
+                if (ctx.current_axis == Axis::HORIZONTAL) {
+                    cv::resize(ctx.current_image, scaled, cv::Size(target_size, ctx.current_image.rows));
+                } else {
+                    cv::resize(ctx.current_image, scaled, cv::Size(ctx.current_image.cols, target_size));
+                }
+            }
+            DestroyBackgroundTexture(ctx);
+            ctx.background_texture = MatToTexture(ctx.renderer, scaled);
+            ctx.tex_w = scaled.cols;
+            ctx.tex_h = scaled.rows;
+        }
+    }
     ImGui::End();
 
     ImGui::Render();
@@ -270,6 +332,19 @@ int main(int argc, char* argv[]) {
                     cv::Mat new_image = cv::imread(ctx.dropped_file_path);
 
                     if (!new_image.empty()) {
+                        ctx.current_image = new_image;
+                        ctx.carver.setImage(new_image);
+                        
+                        std::cout << "Rozpoczynam prekomputację wszystkich szwów. Proszę czekać..." << std::endl;
+                        uint64_t start = SDL_GetTicks();
+                        ctx.fast_carver.precompute(new_image, ctx.carver, ctx.current_axis);
+                        uint64_t end = SDL_GetTicks();
+                        std::cout << "Prekomputacja zakończona w " << (end - start) << " ms." << std::endl;
+                        
+                        ctx.target_pct = 100;
+                        ctx.tex_w = new_image.cols;
+                        ctx.tex_h = new_image.rows;
+                        
                         DestroyBackgroundTexture(ctx);
                         ctx.background_texture =
                             MatToTexture(renderer, new_image);
