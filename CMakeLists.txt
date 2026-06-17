@@ -106,16 +106,3 @@ target_link_libraries(${APP_NAME}
 
         OpenMP::OpenMP_CXX
 )
-
-add_executable(benchmark App/benchmark.cpp)
-target_include_directories(benchmark PRIVATE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/App" 
-    "${CMAKE_CURRENT_BINARY_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/core/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/imgproc/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/imgcodecs/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/videoio/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/opencv/modules/highgui/include"
-)
-target_link_libraries(benchmark PRIVATE opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui OpenMP::OpenMP_CXX)
