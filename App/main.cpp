@@ -45,6 +45,7 @@ struct AppContext {
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     Uint32 open_image_event = 0;
+    Uint32 save_image_event = 0;
 
     int window_w = 0;
     int window_h = 0;
@@ -53,6 +54,7 @@ struct AppContext {
 
     SDL_Texture *background_texture = nullptr;
     cv::Mat current_image;
+    cv::Mat output_image;
     bool loading_image = false;
     std::string loading_text = "Precomputing image. Please wait...";
     std::future<LoadedImageResult> image_load_task;
@@ -67,6 +69,9 @@ struct AppContext {
     int tex_w = 0;
     int tex_h = 0;
 };
+
+void SDLCALL OpenImageDialogCallback(void *userdata, const char *const *filelist, int filter);
+void SDLCALL SaveImageDialogCallback(void *userdata, const char *const *filelist, int filter);
 
 SDL_Texture *MatToTexture(SDL_Renderer *renderer, const cv::Mat &mat) {
     if (renderer == nullptr || mat.empty()) {
@@ -113,6 +118,38 @@ void DestroyBackgroundTexture(AppContext &ctx) {
         SDL_DestroyTexture(ctx.background_texture);
         ctx.background_texture = nullptr;
     }
+}
+
+std::string EnsureImageExtension(std::string path) {
+    const std::size_t last_separator = path.find_last_of("/\\");
+    const std::size_t last_dot = path.find_last_of('.');
+
+    if (last_dot == std::string::npos ||
+        (last_separator != std::string::npos && last_dot < last_separator)) {
+        path += ".png";
+    }
+
+    return path;
+}
+
+void ShowOpenImageDialog(AppContext &ctx) {
+    static constexpr std::array<SDL_DialogFileFilter, 2> filters = {{
+        {.name = "Images", .pattern = "png;jpg;jpeg;bmp;webp"},
+        {.name = "All files", .pattern = "*"},
+    }};
+
+    SDL_ShowOpenFileDialog(OpenImageDialogCallback, &ctx, ctx.window, filters.data(),
+                           static_cast<int>(filters.size()), nullptr, false);
+}
+
+void ShowSaveImageDialog(AppContext &ctx) {
+    static constexpr std::array<SDL_DialogFileFilter, 2> filters = {{
+        {.name = "Images", .pattern = "png;jpg;jpeg;bmp;webp"},
+        {.name = "All files", .pattern = "*"},
+    }};
+
+    SDL_ShowSaveFileDialog(SaveImageDialogCallback, &ctx, ctx.window, filters.data(),
+                           static_cast<int>(filters.size()), "output.png");
 }
 
 void ShowDockSpace() {
@@ -200,6 +237,7 @@ void ApplyLoadedImageResult(AppContext &ctx, LoadedImageResult result) {
 
     ctx.dropped_file_path = result.path;
     ctx.current_image = new_image;
+    ctx.output_image = new_image;
     ctx.carver = result.carver;
     ctx.fast_carver = std::move(result.fast_carver);
 
@@ -249,6 +287,44 @@ void SDLCALL OpenImageDialogCallback(void *userdata, const char *const *filelist
     event.user.data1 = SDL_strdup(filelist[0]);
 
     SDL_PushEvent(&event);
+}
+
+void SDLCALL SaveImageDialogCallback(void *userdata, const char *const *filelist, int filter) {
+    static_cast<void>(filter);
+
+    const auto *ctx = static_cast<const AppContext *>(userdata);
+    if (ctx == nullptr || ctx->save_image_event == 0 || filelist == nullptr ||
+        filelist[0] == nullptr) {
+        return;
+    }
+
+    SDL_Event event{};
+    event.type = ctx->save_image_event;
+    event.user.data1 = SDL_strdup(filelist[0]);
+
+    SDL_PushEvent(&event);
+}
+
+void SaveImageToPath(AppContext &ctx, const std::string &path) {
+    const cv::Mat &image_to_save = ctx.output_image.empty() ? ctx.current_image : ctx.output_image;
+
+    if (image_to_save.empty()) {
+        ctx.dropped_file_path = "No image to save.";
+        return;
+    }
+
+    const std::string save_path = EnsureImageExtension(path);
+
+    try {
+        if (cv::imwrite(save_path, image_to_save)) {
+            ctx.dropped_file_path = "Saved image: " + save_path;
+        } else {
+            ctx.dropped_file_path = "Failed to save image: " + save_path;
+        }
+    } catch (const cv::Exception &error) {
+        ctx.dropped_file_path = "Failed to save image: " + save_path;
+        std::cerr << error.what() << '\n';
+    }
 }
 
 void RenderFrame(AppContext &ctx) {
@@ -313,13 +389,7 @@ void RenderFrame(AppContext &ctx) {
         ImGui::SetCursorPosX(button_x);
 
         if (ImGui::Button("Load file", ImVec2(button_width, 0.0f))) {
-            static constexpr std::array<SDL_DialogFileFilter, 2> filters = {{
-                {.name = "Images", .pattern = "png;jpg;jpeg;bmp;webp"},
-                {.name = "All files", .pattern = "*"},
-            }};
-
-            SDL_ShowOpenFileDialog(OpenImageDialogCallback, &ctx, ctx.window, filters.data(),
-                                   static_cast<int>(filters.size()), nullptr, false);
+            ShowOpenImageDialog(ctx);
         }
     }
     ImGui::End();
@@ -330,6 +400,15 @@ void RenderFrame(AppContext &ctx) {
     ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "%s", ctx.dropped_file_path.c_str());
 
     if (!ctx.loading_image && !ctx.current_image.empty()) {
+        ImGui::Separator();
+        if (ImGui::Button("Load file")) {
+            ShowOpenImageDialog(ctx);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Save image")) {
+            ShowSaveImageDialog(ctx);
+        }
+
         ImGui::Separator();
         ImGui::Text("Base Size: %dx%d", ctx.current_image.cols, ctx.current_image.rows);
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "Precomputed Real-Time Seam Carving");
@@ -353,6 +432,7 @@ void RenderFrame(AppContext &ctx) {
             int max_size = (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols
                                                                   : ctx.current_image.rows;
             cv::Mat scaled = ctx.fast_carver.getRealTimeImage(max_size);
+            ctx.output_image = scaled;
             DestroyBackgroundTexture(ctx);
             ctx.background_texture = MatToTexture(ctx.renderer, scaled);
             ctx.tex_w = scaled.cols;
@@ -378,6 +458,7 @@ void RenderFrame(AppContext &ctx) {
                                cv::Size(ctx.current_image.cols, target_size));
                 }
             }
+            ctx.output_image = scaled;
             DestroyBackgroundTexture(ctx);
             ctx.background_texture = MatToTexture(ctx.renderer, scaled);
             ctx.tex_w = scaled.cols;
@@ -449,6 +530,7 @@ int main(int argc, char *argv[]) {
     ctx.window = window;
     ctx.renderer = renderer;
     ctx.open_image_event = SDL_RegisterEvents(1);
+    ctx.save_image_event = SDL_RegisterEvents(1);
     SDL_GetWindowSize(window, &ctx.window_w, &ctx.window_h);
 
     const SDL_WindowID window_id = SDL_GetWindowID(window);
@@ -481,6 +563,14 @@ int main(int argc, char *argv[]) {
 
                 if (path != nullptr) {
                     StartImageLoad(ctx, path.get());
+                }
+            }
+
+            if (event.type == ctx.save_image_event) {
+                SdlStringPtr path(static_cast<char *>(event.user.data1));
+
+                if (path != nullptr) {
+                    SaveImageToPath(ctx, path.get());
                 }
             }
         }
