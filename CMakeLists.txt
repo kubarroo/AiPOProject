@@ -10,16 +10,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Sources
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/app/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/App/*.h"
 )
 
+list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/App/benchmark.cpp")
 add_executable(${APP_NAME} ${APP_SOURCES})
 
 target_include_directories(${APP_NAME}
     PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/app"
+        "${CMAKE_CURRENT_SOURCE_DIR}/App"
 )
 
 # SDL3
