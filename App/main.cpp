@@ -260,7 +260,7 @@ void RenderFrame(AppContext &ctx) {
 
     ShowDockSpace();
 
-    ImGui::Begin("Image");
+    ImGui::Begin("Image", nullptr, ImGuiWindowFlags_HorizontalScrollbar);
     if (ctx.loading_image) {
         const char *file_load_text = ctx.loading_text.c_str();
 
