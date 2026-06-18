@@ -40,7 +40,7 @@ class FastCarver {
         }
     }
 
-    cv::Mat getRealTimeImage(int target_size) {
+    cv::Mat getRealTimeImage(int target_size, bool show_seam = false) {
         if (baseImage.empty() || indexMap.empty())
             return cv::Mat();
         int H = baseImage.rows;
@@ -58,7 +58,7 @@ class FastCarver {
                     int death_index = indexMap.at<int>(y, x);
                     if (death_index > pixels_to_remove) {
                         if (dest_x < target_size) {
-                            if (death_index == pixels_to_remove + 1) {
+                            if (show_seam && death_index == pixels_to_remove + 1) {
                                 result.at<cv::Vec3b>(y, dest_x) = cv::Vec3b(0, 0, 255);
                             } else {
                                 result.at<cv::Vec3b>(y, dest_x) = baseImage.at<cv::Vec3b>(y, x);
@@ -104,18 +104,20 @@ class FastCarver {
                 }
             }
 
-            for (int y = 0; y < H - 1; ++y) {
-                int x1 = red_seam_x[y];
-                int x2 = red_seam_x[y + 1];
-                if (x1 != -1 && x2 != -1) {
-                    cv::line(result, cv::Point(x1, y), cv::Point(x2, y + 1), cv::Scalar(0, 0, 255),
-                             1);
-                } else if (x1 != -1) {
-                    result.at<cv::Vec3b>(y, x1) = cv::Vec3b(0, 0, 255);
+            if (show_seam && pixels_to_add > 0) {
+                for (int y = 0; y < H - 1; ++y) {
+                    int x1 = red_seam_x[y];
+                    int x2 = red_seam_x[y + 1];
+                    if (x1 != -1 && x2 != -1) {
+                        cv::line(result, cv::Point(x1, y), cv::Point(x2, y + 1),
+                                 cv::Scalar(0, 0, 255), 1);
+                    } else if (x1 != -1) {
+                        result.at<cv::Vec3b>(y, x1) = cv::Vec3b(0, 0, 255);
+                    }
                 }
-            }
-            if (H > 0 && red_seam_x[H - 1] != -1) {
-                result.at<cv::Vec3b>(H - 1, red_seam_x[H - 1]) = cv::Vec3b(0, 0, 255);
+                if (H > 0 && red_seam_x[H - 1] != -1) {
+                    result.at<cv::Vec3b>(H - 1, red_seam_x[H - 1]) = cv::Vec3b(0, 0, 255);
+                }
             }
         }
 

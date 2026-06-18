@@ -62,6 +62,7 @@ struct AppContext {
     SeamCarver carver;
     FastCarver fast_carver;
     bool use_seam_carving = true;
+    bool show_seam_visualization = true;
 
     Axis current_axis = Axis::HORIZONTAL;
     int target_pct = 100;
@@ -118,6 +119,42 @@ void DestroyBackgroundTexture(AppContext &ctx) {
         SDL_DestroyTexture(ctx.background_texture);
         ctx.background_texture = nullptr;
     }
+}
+
+void SetPreviewImage(AppContext &ctx, const cv::Mat &preview_image) {
+    DestroyBackgroundTexture(ctx);
+    ctx.background_texture = MatToTexture(ctx.renderer, preview_image);
+    ctx.tex_w = preview_image.cols;
+    ctx.tex_h = preview_image.rows;
+}
+
+void RefreshScaledImage(AppContext &ctx) {
+    if (ctx.current_image.empty()) {
+        return;
+    }
+
+    const int max_size =
+        (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols : ctx.current_image.rows;
+    const int target_size = std::max(1, (max_size * ctx.target_pct) / 100);
+
+    if (ctx.use_seam_carving) {
+        ctx.output_image = ctx.fast_carver.getRealTimeImage(target_size, false);
+        cv::Mat preview_image = ctx.show_seam_visualization
+                                    ? ctx.fast_carver.getRealTimeImage(target_size, true)
+                                    : ctx.output_image;
+        SetPreviewImage(ctx, preview_image);
+        return;
+    }
+
+    if (ctx.current_axis == Axis::HORIZONTAL) {
+        cv::resize(ctx.current_image, ctx.output_image,
+                   cv::Size(target_size, ctx.current_image.rows));
+    } else {
+        cv::resize(ctx.current_image, ctx.output_image,
+                   cv::Size(ctx.current_image.cols, target_size));
+    }
+
+    SetPreviewImage(ctx, ctx.output_image);
 }
 
 std::string EnsureImageExtension(std::string path) {
@@ -244,11 +281,8 @@ void ApplyLoadedImageResult(AppContext &ctx, LoadedImageResult result) {
     std::cout << "Precomputation completed in " << result.elapsed_ms << " ms.\n";
 
     ctx.target_pct = 100;
-    ctx.tex_w = new_image.cols;
-    ctx.tex_h = new_image.rows;
 
-    DestroyBackgroundTexture(ctx);
-    ctx.background_texture = MatToTexture(ctx.renderer, new_image);
+    SetPreviewImage(ctx, new_image);
 }
 
 void StartImageLoad(AppContext &ctx, const std::string &path) {
@@ -412,6 +446,9 @@ void RenderFrame(AppContext &ctx) {
         ImGui::Separator();
         ImGui::Text("Base Size: %dx%d", ctx.current_image.cols, ctx.current_image.rows);
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "Precomputed Real-Time Seam Carving");
+        if (ImGui::Checkbox("Show seam visualization", &ctx.show_seam_visualization)) {
+            RefreshScaledImage(ctx);
+        }
 
         int selected_axis = static_cast<int>(ctx.current_axis);
         const int last_axis = selected_axis;
@@ -429,40 +466,14 @@ void RenderFrame(AppContext &ctx) {
             std::cout << "Prekomputacja zakończona w " << (end - start) << " ms.\n";
 
             ctx.target_pct = 100;
-            int max_size = (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols
-                                                                  : ctx.current_image.rows;
-            cv::Mat scaled = ctx.fast_carver.getRealTimeImage(max_size);
-            ctx.output_image = scaled;
-            DestroyBackgroundTexture(ctx);
-            ctx.background_texture = MatToTexture(ctx.renderer, scaled);
-            ctx.tex_w = scaled.cols;
-            ctx.tex_h = scaled.rows;
+            RefreshScaledImage(ctx);
         }
 
-        int max_size = (ctx.current_axis == Axis::HORIZONTAL) ? ctx.current_image.cols
-                                                              : ctx.current_image.rows;
         const char *slider_label =
             (ctx.current_axis == Axis::HORIZONTAL) ? "Horizontal Scale (%)" : "Vertical Scale (%)";
 
         if (ImGui::SliderInt(slider_label, &ctx.target_pct, 1, 200)) {
-            int target_size = std::max(1, (max_size * ctx.target_pct) / 100);
-            cv::Mat scaled;
-            if (ctx.use_seam_carving) {
-                scaled = ctx.fast_carver.getRealTimeImage(target_size);
-            } else {
-                if (ctx.current_axis == Axis::HORIZONTAL) {
-                    cv::resize(ctx.current_image, scaled,
-                               cv::Size(target_size, ctx.current_image.rows));
-                } else {
-                    cv::resize(ctx.current_image, scaled,
-                               cv::Size(ctx.current_image.cols, target_size));
-                }
-            }
-            ctx.output_image = scaled;
-            DestroyBackgroundTexture(ctx);
-            ctx.background_texture = MatToTexture(ctx.renderer, scaled);
-            ctx.tex_w = scaled.cols;
-            ctx.tex_h = scaled.rows;
+            RefreshScaledImage(ctx);
         }
     }
     ImGui::End();
