@@ -15,7 +15,7 @@
     {
       "name": "gcc-linux-debug",
       "displayName": "GCC Linux Debug",
-      "generator": "Ninja",
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build/gcc-linux-debug",
       "condition": {
         "type": "equals",
