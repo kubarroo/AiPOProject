@@ -133,6 +133,16 @@ Wymagane narzędzia:
 - obsługa OpenMP w używanym kompilatorze,
 - Git z obsługą submodułów.
 
+Na Linuksie, przed konfiguracją projektu, należy zainstalować zależności systemowe wymagane do zbudowania SDL3, OpenCV oraz aplikacji:
+
+```bash
+sudo apt install build-essential cmake make pkg-config \
+  libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+  libxkbcommon-dev libwayland-dev libdecor-0-dev \
+  libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+  libasound2-dev libpulse-dev libudev-dev libusb-1.0-0-dev
+```
+
 Po sklonowaniu repozytorium należy pobrać biblioteki zewnętrzne:
 
 ```powershell
