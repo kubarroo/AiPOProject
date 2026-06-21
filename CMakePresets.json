@@ -13,6 +13,22 @@
       }
     },
     {
+      "name": "gcc-linux-debug",
+      "displayName": "GCC Linux Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/gcc-linux-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
         "name": "clang-macos-homebrew-debug",
         "generator": "Ninja",
         "binaryDir": "${sourceDir}/build/clang-macos-debug",
@@ -27,6 +43,10 @@
     {
       "name": "clang-debug",
       "configurePreset": "clang-debug"
+    },
+    {
+      "name": "gcc-linux-debug",
+      "configurePreset": "gcc-linux-debug"
     },
     {
       "name": "clang-macos-homebrew-debug",

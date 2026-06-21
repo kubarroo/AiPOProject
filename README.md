@@ -47,13 +47,13 @@ Modyfikacja macierzy obrazu polegająca na usunięciu znalezionego szwu lub dupl
 1. Przygotowanie repozytorium i struktury projektu. ✔️
 2. Przygotowanie narzędzi do budowania projektu. ✔️
 3. Dodanie obsługi zdarzenia drag-and-drop dla plików graficznych. ✔️
-4. Implementacja funkcji obliczającej mapę energii obrazu.
-5. Implementacja algorytmu wyszukiwania optymalnego szwu pionowego i poziomego.
-6. Implementacja mechanizmu usuwania wskazanych szwów z macierzy obrazu.
-7. Stworzenie interfejsu graficznego (GUI).
-8. Integracja algorytmu z logiką interfejsu – podpięcie algorytmu pod zdarzenia zmiany rozdzielczości.
-9. Ewentualna optymalizacja algorytmów.
-10. Ręczne testowanie aplikacji.
+4. Implementacja funkcji obliczającej mapę energii obrazu. ✔️
+5. Implementacja algorytmu wyszukiwania optymalnego szwu pionowego i poziomego. ✔️
+6. Implementacja mechanizmu usuwania wskazanych szwów z macierzy obrazu. ✔️
+7. Stworzenie interfejsu graficznego (GUI). ✔️
+8. Integracja algorytmu z logiką interfejsu – podpięcie algorytmu pod zdarzenia zmiany rozdzielczości. ✔️
+9. Ewentualna optymalizacja algorytmów. 
+10. Ręczne testowanie aplikacji. ✔️
 11. Opracowanie szczegółowej dokumentacji.
 
 ## Podział zadań
