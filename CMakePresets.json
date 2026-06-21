@@ -25,7 +25,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++"
+        "CMAKE_CXX_COMPILER": "g++",
+        "PKG_CONFIG_EXECUTABLE": "/usr/bin/pkg-config"
       }
     },
     {
