@@ -108,7 +108,7 @@ Wynik skalowania jest przechowywany oddzielnie od obrazu wejściowego. Dzięki t
 6. Implementacja mechanizmu usuwania wskazanych szwów z macierzy obrazu. ✔️
 7. Stworzenie interfejsu graficznego (GUI). ✔️
 8. Integracja algorytmu z logiką interfejsu – podpięcie algorytmu pod zdarzenia zmiany rozdzielczości. ✔️
-9. Ewentualna optymalizacja algorytmów. 
+9. Ewentualna optymalizacja algorytmów. ✔️
 10. Ręczne testowanie aplikacji. ✔️
 11. Opracowanie szczegółowej dokumentacji. ✔️
 
@@ -207,6 +207,25 @@ Przykładowy scenariusz:
 6. Użytkownik zapisuje wynik przyciskiem `Save image`, np. jako `landscape_resized.png`.
 
 Analogicznie można zwiększyć szerokość albo zmienić wysokość obrazu przez przełączenie osi skalowania.
+
+### Wizualne przykłady działania
+
+Zależnie od wybranej osi pracy, algorytm inteligentnie wycina odpowiednie szwy z obrazu:
+
+**1. Obraz oryginalny**
+Zdjęcie wyjściowe wczytane do aplikacji przed wprowadzeniem jakichkolwiek modyfikacji.
+
+![Oryginalny obraz](resources/readme_example_1.png)
+
+**2. Skalowanie horyzontalne (szerokość)**
+Przykład zmniejszania szerokości. Aplikacja wyszukuje i redukuje mało istotne szwy pionowe, chroniąc tym samym główne obiekty i naturalne proporcje w poziomie.
+
+![Skalowanie horyzontalne](resources/readme_example_2.png)
+
+**3. Skalowanie wertykalne (wysokość)**
+Przykład skalowania w pionie. Tym razem zmniejszana jest wysokość obrazu poprzez usuwanie (lub powielanie) szwów poziomych o najniższej energii.
+
+![Skalowanie wertykalne](resources/readme_example_3.png)
 
 ## Co nie działa
 
